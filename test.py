@@ -4,8 +4,7 @@ from mako.template import Template
 GPIO = rg.RegisterMap('GPIO')
 
 GPIO[0] = 'CTRL'
+GPIO[1] = 'STAT'
+GPIO['STAT2'] = 3
 
-GPIO.CTRL[0] = ('DIR', 'RW')
-GPIO.CTRL[2:1] = ('VAR', 'RW')
-
-GPIO.verilog("tmp/output.v")
+print(GPIO)

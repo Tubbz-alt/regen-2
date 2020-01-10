@@ -75,6 +75,9 @@ class RegisterMap:
     def __getitem__(self, name_or_addr):
         return self.get(name_or_addr)
 
+    def __len__(self):
+        return self._registers.__len__()
+
     def has(self, name_or_addr):
         """
         Test if register with given name or address offset exists in map
@@ -107,10 +110,25 @@ class RegisterMap:
             # No register with name or address offset
             raise ValueError
 
+    def remove(self, name_or_addr):
+        """
+        Remove register in current map
+        """
+        t = self.get(name_or_addr)
+        self._registers.remove(t)
+
+    def clear(self) -> None:
+        """
+        Remove all registers in current map, leave name and other attributes untouched
+        """
+        self._registers.clear()
+
     def add(self, reg, dup_check=True):
         if dup_check:
-            # TODO: DO duplicate check
-            pass
+            if self.has(reg.name):
+                self.remove(reg.name)
+            if self.has(reg.address_offset):
+                self.remove(reg.address_offset)
         # Append the new register to register list
         self._registers.append(reg)
 
