@@ -60,7 +60,7 @@ class Field:
         if self.bit_width == 1:
             return "[" + str(self.bit_width + self.bit_offset - 1) + "]"
         else:
-            return "[" + str(self.bit_width + self.bit_offset - 1) + ":" + str(self.bit_offset - 1) + "]"
+            return "[" + str(self.bit_width + self.bit_offset - 1) + ":" + str(self.bit_offset) + "]"
 
 
 class Register:
@@ -191,7 +191,7 @@ class RegisterMap:
     # Required attributes
     base_address = 0
     data_width = 32
-    address_width = 10
+    address_width = 0 # 0 = Auto address width (minimal)
 
     # Optional attributes
     description = ""
@@ -199,9 +199,11 @@ class RegisterMap:
     # Data storage
     _registers = []
 
-    def __init__(self, name, base_address=0):
+    def __init__(self, name, base_address=0, data_width=32, address_width=0):
         self.name = name
         self.base_address = base_address
+        self.data_width = data_width
+        self.address_width = address_width
 
     def __iter__(self):
         return iter(self._registers)
