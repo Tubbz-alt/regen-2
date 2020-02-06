@@ -79,6 +79,18 @@ class Field:
         else:
             return f'[{self.bit_offset + self.bit_width - 1}:{self.bit_offset}]'
 
+    @property
+    def full_name(self) -> str:
+        """
+        Get the string of field name in "REGISTER.FIELD" format
+        :param delimiter: The delimiter character that separates Register name and Filed name
+        :return: The full name of field in string
+        """
+        if self._parent:
+            return self._parent.name + '_' + self.name
+        else:
+            return self.name
+
     @staticmethod
     def from_dict(d: dict) -> "Field":
         """
@@ -97,17 +109,6 @@ class Field:
                 setattr(ret, a, d[a])
 
         return ret
-
-    def full_name(self, delimiter='.') -> str:
-        """
-        Get the string of field name in "REGISTER.FIELD" format
-        :param delimiter: The delimiter character that separates Register name and Filed name
-        :return: The full name of field in string
-        """
-        if self._parent:
-            return self._parent.name + delimiter + self.name
-        else:
-            return self.name
 
 
 class Register:
@@ -136,7 +137,7 @@ class Register:
         return self._fields.__len__()
 
     def __iter__(self):
-        return iter(self.fields)
+        return iter(self._fields)
 
     def __getitem__(self, item: str) -> Field:
         """
@@ -174,8 +175,7 @@ class Register:
         field = Field(name=value, bit_offset=bit_offset, bit_width=bit_width)
 
         # Add the filed to Register
-        if not self.add_field(field):
-            raise ValueError
+        self.add_field(field)
 
     def __cmp__(self, other):
         if self.address_offset < other.address_offset:
@@ -195,7 +195,11 @@ class Register:
 
     @property
     def fields(self):
-        return sorted(self._fields, key=lambda x: x.bit_offset, reverse=True)
+        return self._fields
+
+    @property
+    def fields_name_list(self):
+        return [f.name for f in self._fields]
 
     @staticmethod
     def from_tuple(t):
@@ -232,84 +236,96 @@ class Register:
 
         return ret
 
-    def add_field(self, field: Field):
-        """
-        Add a Field object to this Register
-        :param field: The Field object to be add
-        :return: If add operation is success
-        """
-        # Check if field name is occupy
-        if self.has_field(field.name):
-            return False
-
-        # Check if overlap with existing fields
-        overlap = 0
-        overlapped_field = None
-        for f in self._fields:
-            if not (field.bit_offset > (f.bit_offset + f.bit_width - 1) or
-                    f.bit_offset > (field.bit_offset + field.bit_width - 1)):
-                overlap = 1
-                overlapped_field = f
-                break
-        if overlap:
-            print("Overlap with field {0}".format(overlapped_field.full_name()))
-            return False
-
-        # Check pass, add this field
-        field._parent = self
-        self._fields.append(field)
-        return True
-
-    def has_field(self, name: str):
+    def has_field(self, name: str) -> bool:
         """
         Test if given name of the field is exists in register
+
         :param name: The name of the field
-        :return: If the field with given name exists
+        :return: True if the field with given name exists, else False
         """
+
+        # Check if name exists
         if type(name) is str:
             return name in [f.name for f in self._fields]
         else:
-            raise TypeError
+            raise TypeError('field name should in str')
 
-    def get_field(self, name: str) -> Union[Field, None]:
+    def get_field(self, name: str) -> Field:
         """
         Get the field in Register by name
+
         :param name: The name of the field
-        :return: The Filed with the given name, or None if not exists
+        :return: The field with the given name
         """
+
         if type(name) is str:
             nl = [f.name for f in self._fields]
             if name in nl:
                 idx = nl.index(name)
                 return self._fields[idx]
             else:
-                return None
+                raise KeyError('no field with given name')
         else:
-            raise TypeError
+            raise TypeError('field name should in str')
 
     def remove_field(self, name: str) -> None:
+        """
+        Remove Field from this Register
+
+        :param name: The name of the field to be removed
+        :return: None
+        """
+
         f = self.get_field(name)
         if f:
             self._fields.remove(f)
+        else:
+            raise ValueError('nothing to remove')
 
     def clear_fields(self) -> None:
         """
         Clear all fields without touching other parameters
+
         :return: None
         """
         self._fields.clear()
 
-    def all_fields(self, sort=True, reverse=True) -> List[Field]:
+    def add_field(self, field: Field) -> None:
         """
-        Get all fields in a list, sorted by bit_offset
-        :param sort: If true, sort the fields by bit offset
-        :param reverse: If true, when sort, reverse the order
-        :return: A list with all fields
+        Add a Field object to this Register
+
+        :param field: The Field object to be add
+        :return: If add operation is success
         """
-        if sort:
-            return sorted(self._fields, key=lambda x: x.bit_offset, reverse=reverse)
-        else:
-            return self._fields
+
+        # Check if field name is occupy
+        if self.has_field(field.name):
+            raise ValueError('duplicate name of field')
+
+        # Check if overlap with existing fields
+        overlapped_field: Union[Field, None] = None
+        for f in self._fields:
+            if not (field.bit_offset > (f.bit_offset + f.bit_width - 1) or
+                    f.bit_offset > (field.bit_offset + field.bit_width - 1)):
+                overlapped_field = f
+                break
+        if overlapped_field:
+            raise ValueError(f'Overlap with existing field {overlapped_field.full_name}')
+
+        # Check pass, add this field
+        field._parent = self
+        self._fields.append(field)
+        self._fields.sort(key=lambda x: x.bit_offset, reverse=True)
+
+    def drc(self) -> bool:
+        """
+        DRC (Design Rule Check) function
+
+        :return: True if the DRC is pass, false if and DRC is violated
+        """
+
+        # TODO
+        raise SystemError('drc function is not implemented')
 
 
 class RegisterMap:
@@ -334,7 +350,7 @@ class RegisterMap:
         self._registers = list()
 
     def __iter__(self):
-        return iter(self.registers)
+        return iter(self._registers)
 
     def __setitem__(self, key: int, value: str) -> None:
         """
@@ -368,7 +384,11 @@ class RegisterMap:
 
     @property
     def registers(self):
-        return sorted(self._registers, key=lambda x: x.address_offset)
+        return self._registers
+
+    @property
+    def registers_name_list(self):
+        return [r.name for r in self._registers]
 
     def has_register(self, name_or_addr: Union[str, int]) -> bool:
         """
@@ -385,38 +405,46 @@ class RegisterMap:
         elif type(name_or_addr) is int:
             return name_or_addr in {r.address_offset for r in self._registers}
         else:
-            raise TypeError
+            raise TypeError('name_or_addr should be str or int')
 
-    def get_register(self, name_or_addr) -> Register:
+    def get_register(self, name_or_addr: Union[str, int]) -> Register:
         """
-        Get the register with given name or address offset in map
-        :param name_or_addr:
-        :return:
+        Get the register with given `name` or `address offset` in map
+
+        :param name_or_addr: The name or address offset of the register
+        :return: The desired register with given name or address offset
         """
-        if self.has_register(name_or_addr):
-            if type(name_or_addr) is str:
-                idx = [r.name for r in self._registers].index(name_or_addr)
-                return self._registers[idx]
-            elif type(name_or_addr) is int:
-                idx = [r.address_offset for r in self._registers].index(name_or_addr)
+
+        if type(name_or_addr) is str:
+            nl = [r.name for r in self._registers]
+            if name_or_addr in nl:
+                idx = nl.index(name_or_addr)
                 return self._registers[idx]
             else:
-                raise TypeError
+                raise KeyError('no register with given name')
+        elif type(name_or_addr) is int:
+            al = [r.address_offset for r in self._registers]
+            if name_or_addr in al:
+                idx = al.index(name_or_addr)
+                return self._registers[idx]
+            else:
+                raise ValueError('no register with given address offset')
         else:
-            # No register with name or address offset
-            raise ValueError
+            raise TypeError('name_or_addr should be str or int')
 
-    def remove_register(self, name_or_addr) -> None:
+    def remove_register(self, name_or_addr: Union[str, int]) -> None:
         """
         Remove register in current map
 
+        :param name_or_addr: The name or the address of the Register to be removed
         :return: None
         """
+
         t = self.get_register(name_or_addr)
         if t:
             self._registers.remove(t)
         else:
-            raise ValueError(self.remove_register.__name__)
+            raise ValueError('nothing to remove')
 
     def clear_registers(self) -> None:
         """
@@ -446,16 +474,17 @@ class RegisterMap:
         # Append the new register to register list
         reg._parent = self
         self._registers.append(reg)
+        self._registers.sort(key=lambda x: x.address_offset)
 
     def drc(self) -> bool:
         """
         DRC (Design Rule Check) function
 
-        :return: If the DRC check is pass
+        :return: True if the DRC is pass, false if any DRC is violated
         """
 
         # TODO
-        raise SystemError("function \"drc\" not implemented!")
+        raise SystemError('drc function is not implemented')
 
     def gen_verilog(self, output_file: str = None, template_file="template/bram.v") -> None:
         """
