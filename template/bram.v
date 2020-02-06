@@ -35,15 +35,15 @@ module ${regMap.name} #(
             % if not (loop.index == len(reg) - 1 and loop.parent.index == len(regMap) - 1):
                 ## Ports list, with ',' ending
                 % if field.access_type == 'RW':
-    output wire ${field.self_range} ${field.full_name('_')},
+    output wire ${field.self_range} ${field.full_name},
                 % elif field.access_type == 'RO':
-    input  wire ${field.self_range} ${field.full_name('_')},
+    input  wire ${field.self_range} ${field.full_name},
                 % endif
             % else:
                 % if field.access_type == 'RW':
-    output wire ${field.self_range} ${field.full_name('_')}
+    output wire ${field.self_range} ${field.full_name}
                 % elif field.access_type == 'RO':
-    input  wire ${field.self_range} ${field.full_name('_')}
+    input  wire ${field.self_range} ${field.full_name}
                 % endif
             % endif
         % endfor
@@ -51,34 +51,48 @@ module ${regMap.name} #(
     % endfor
 );
 
+    // Internal FFs
+
     % for reg in regMap:
     // ${ reg.name }
         % for field in reg:
             % if field.access_type == 'RW' or field.access_type == 'RO':
-    reg ${field.self_range} ${field.full_name('_')}_reg;
+    reg ${field.self_range} ${field.full_name}_reg;
             % endif
         % endfor
 
     % endfor
 
-    // All writable registers/fields
+    // Registers/fields update
 
     % for reg in regMap:
     // ${ reg.name }
         % for field in reg:
+            % if field.access_type == 'RW':
     always @ (posedge clk) begin
         if (rst) begin
-            ${field.full_name('_')}_reg <= 'd${field.reset};
+            ${field.full_name}_reg <= 'd${field.reset};
         end else if (wr_en == 1'b1 && wr_addr == 'd${reg.address_offset}) begin
-            ${field.full_name('_')}_reg <= wr_data${field.full_range};
+            ${field.full_name}_reg <= wr_data${field.full_range};
         end
     end
 
-        % endfor
+    assign ${field.full_name} = ${field.full_name}_reg;
 
+            % elif field.access_type == 'RW':
+    always @ (posedge clk) begin
+        if (rst) begin
+            ${field.full_name}_reg <= 'd${field.reset};
+        end else begin
+            ${field.full_name}_reg <= ${field.full_name};
+        end
+    end
+
+            % endif
+        % endfor
     % endfor
 
-    // All readable registers/fields
+    // Register Reading
 
     always @ (posedge clk) begin
         if (rst) begin
@@ -90,7 +104,7 @@ module ${regMap.name} #(
                 // ${reg.name}
                 ${reg.address_offset}: begin
                     % for field in reg:
-                    rd_data${field.full_range} <= ${field.full_name('_')}_reg;
+                    rd_data${field.full_range} <= ${field.full_name}_reg;
                     % endfor
                 end
                 % endfor
