@@ -1,8 +1,3 @@
-/*
-Copyright (c) 2019 Chengdu JinZhiLi Technology Co., Ltd.
-All rights reserved.
-*/
-
 `timescale 1 ns / 1 ps
 `default_nettype none
 
@@ -40,15 +35,15 @@ module ${regMap.name} #(
             % if not (loop.index == len(reg) - 1 and loop.parent.index == len(regMap) - 1):
                 ## Ports list, with ',' ending
                 % if field.access_type == 'RW':
-    output wire ${field.self_range()} ${field.full_name('_')},
+    output wire ${field.self_range} ${field.full_name('_')},
                 % elif field.access_type == 'RO':
-    input  wire ${field.self_range()} ${field.full_name('_')},
+    input  wire ${field.self_range} ${field.full_name('_')},
                 % endif
             % else:
                 % if field.access_type == 'RW':
-    output wire ${field.self_range()} ${field.full_name('_')}
+    output wire ${field.self_range} ${field.full_name('_')}
                 % elif field.access_type == 'RO':
-    input  wire ${field.self_range()} ${field.full_name('_')}
+    input  wire ${field.self_range} ${field.full_name('_')}
                 % endif
             % endif
         % endfor
@@ -60,7 +55,7 @@ module ${regMap.name} #(
     // ${ reg.name }
         % for field in reg:
             % if field.access_type == 'RW' or field.access_type == 'RO':
-    reg ${field.self_range()} ${field.full_name('_')}_reg;
+    reg ${field.self_range} ${field.full_name('_')}_reg;
             % endif
         % endfor
 
@@ -75,7 +70,7 @@ module ${regMap.name} #(
         if (rst) begin
             ${field.full_name('_')}_reg <= 'd${field.reset};
         end else if (wr_en == 1'b1 && wr_addr == 'd${reg.address_offset}) begin
-            ${field.full_name('_')}_reg <= wr_data${field.full_range()};
+            ${field.full_name('_')}_reg <= wr_data${field.full_range};
         end
     end
 
@@ -95,7 +90,7 @@ module ${regMap.name} #(
                 // ${reg.name}
                 ${reg.address_offset}: begin
                     % for field in reg:
-                    rd_data${field.full_range()} <= ${field.full_name('_')}_reg;
+                    rd_data${field.full_range} <= ${field.full_name('_')}_reg;
                     % endfor
                 end
                 % endfor
