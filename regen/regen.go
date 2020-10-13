@@ -1,47 +1,33 @@
 package regen
 
-import "encoding/json"
-
-type FieldType string
-
-const (
-	RW  FieldType = "RW"  // Read write
-	RO  FieldType = "RO"  // Read only
-	SC  FieldType = "SC"  // Self clear
-	CR  FieldType = "CR"  // Clear on read
-	GET FieldType = "GET" // FIFO Read like interface
-	SET FieldType = "SET" // FIFO Write like interface
+import (
+	"encoding/json"
+	"io/ioutil"
+	"os"
+	"text/template"
 )
 
-type Field struct {
-	Name    string
-	Type    FieldType
-	Offset  int
-	Width   int
-	Comment string
-}
+func ParseJSON(filename string) error {
 
-type Register struct {
-	Name    string
-	Address int
-	Comment string
-	Fields  []Field
-}
-
-type Block struct {
-	Name        string
-	BaseAddress int
-	Registers   []Register
-}
-
-func FromJSON(jsonBlob []byte) (*Block, error) {
-	blk := &Block{}
-
-	err := json.Unmarshal(jsonBlob, blk)
+	b, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return blk, nil
-}
+	data := Storage{}
+	err = json.Unmarshal(b, &data)
+	if err != nil {
+		return err
+	}
 
+	tpl, err := template.ParseFiles("./template/axi4l.v.template")
+	if err != nil {
+		return err
+	}
+	err = tpl.ExecuteTemplate(os.Stdout, "axi4l.v.template", data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

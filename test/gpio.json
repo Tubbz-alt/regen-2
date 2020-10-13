@@ -1,0 +1,28 @@
+{
+  "jsonVersion": 1,
+  "register_map": {
+    "name": "GPIO",
+    "description": "Simple GPIO controller module\n",
+    "width": 32,
+    "base_address": 0,
+    "registers": [
+      {
+        "type": "NORMAL",
+        "name": "ctrl",
+        "description": "GPIO control",
+        "address_offset": 0,
+        "fields": [
+          {
+            "type": "RW",
+            "name": "GPIO1",
+            "description": "GPIO1 control",
+            "bit_offset": 0,
+            "bit_width": 1,
+            "reset_value": 0,
+            "enum_values": []
+          }
+        ]
+      }
+    ]
+  }
+}
