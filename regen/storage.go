@@ -1,4 +1,25 @@
+//------------------------------------------------------------------------------
+//
+//  Copyright (C) 2020 kele14x
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU Affero General Public License as published
+//  by the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU Affero General Public License for more details.
+//
+//  You should have received a copy of the GNU Affero General Public License
+//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+//------------------------------------------------------------------------------
+
 package regen
+
+import "sort"
 
 // Storage represents data storage of the file
 type Storage struct {
@@ -56,12 +77,36 @@ type EnumValue struct {
 type FieldType string
 
 const (
-	FieldTypeReadWrite    FieldType = "RW"  // Read write
-	FieldTypeReadOnly               = "RO"  // Read only
-	FieldTypeSelfClear              = "SC"  // Self clear
-	FieldTypeClearOnRead            = "CR"  // Clear on read
-	FieldTypeClearOnWrite           = "CW"  // Clear on write
-	FieldTypeCommand                = "CMD" // Command
-	FieldTypeGet                    = "GET" // FIFO Read like interface
-	FieldTypeSet                    = "SET" // FIFO Write like interface
+	FieldTypeReadWrite    FieldType = "RW"  // Read write, output
+	FieldTypeReadOnly               = "RO"  // Read only, input
+	FieldTypeSelfClear              = "SC"  // Self clear, output
+	// TODO: reverse for further implementation
+	//FieldTypeReadWrite2Way          = "RW2"  // Read write, output
+	//FieldTypeClearOnRead            = "CR"  // Clear on read, input
+	//FieldTypeClearOnWrite           = "CW"  // Clear on write, input
+	//FieldTypeCommand                = "CMD" // Command, output
+	//FieldTypeGet                    = "GET" // FIFO Read like interface, input
+	//FieldTypeSet                    = "SET" // FIFO Write like interface, output
 )
+
+// SortFields sort the fields in register
+func (r *Register) SortFields() {
+	sort.Slice(r.Fields, func(i, j int) bool {
+		return r.Fields[i].BitOffset < r.Fields[j].BitOffset
+	})
+}
+
+// SortRegisters sort the registers in register map
+func (rm *RegisterMap) SortRegisters() {
+	sort.Slice(rm.Registers, func(i, j int) bool {
+		return rm.Registers[i].AddressOffset < rm.Registers[j].AddressOffset
+	})
+}
+
+// Sort sorts all register and fields
+func (s *Storage) Sort() {
+	s.RegisterMap.SortRegisters()
+	for _, r := range s.RegisterMap.Registers {
+		r.SortFields()
+	}
+}

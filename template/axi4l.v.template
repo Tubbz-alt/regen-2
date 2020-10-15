@@ -1,53 +1,61 @@
 `timescale 1 ns / 1 ps
 `default_nettype none
 
-module {{.Name}} #(
+module {{.RegisterMap.Name}} #(
     parameter C_ADDR_WIDTH = 10,
     parameter C_DATA_WIDTH = 32,
     parameter C_BASE_ADDR  = ${ regMap.base_address }
 ) (
     // AXI4-Lite Interface
     //--------------------
-    // AXI Clock & Reset
-    input  wire                    aclk,
-    input  wire                    aresetn,
+    // AXI clock & reset
+    input  wire                        aclk         ,
+    input  wire                        aresetn      ,
     // Write address channel
-    input  wire [C_ADDR_WIDTH-1:0] s_axi_awaddr,
-    input  wire [             2:0] s_axi_awprot,
-    input  wire                    s_axi_awvalid,
-    output wire                    s_axi_awready,
+    input  wire [    C_ADDR_WIDTH-1:0] s_axi_awaddr ,
+    input  wire [                 2:0] s_axi_awprot ,
+    input  wire                        s_axi_awvalid,
+    output wire                        s_axi_awready,
     // Write data channel
-    input  wire [C_DATA_WIDTH-1:0] s_axi_wdata,
-    input  wire [(C_DATA_WIDTH/8)-1:0] s_axi_wstrb,
-    input  wire s_axi_wvalid,
-    output wire s_axi_wready,
+    input  wire [    C_DATA_WIDTH-1:0] s_axi_wdata  ,
+    input  wire [(C_DATA_WIDTH/8)-1:0] s_axi_wstrb  ,
+    input  wire                        s_axi_wvalid ,
+    output wire                        s_axi_wready ,
     // Write response channel
-    output wire [1:0] s_axi_bresp,
-    output wire s_axi_bvalid,
-    input  wire s_axi_bready,
+    output wire [                 1:0] s_axi_bresp  ,
+    output wire                        s_axi_bvalid ,
+    input  wire                        s_axi_bready ,
     // Read address channel
-    input  wire [C_ADDR_WIDTH-1:0] s_axi_araddr,
-    input  wire [2:0] s_axi_arprot,
-    input  wire s_axi_arvalid,
-    output wire s_axi_arready,
+    input  wire [    C_ADDR_WIDTH-1:0] s_axi_araddr ,
+    input  wire [                 2:0] s_axi_arprot ,
+    input  wire                        s_axi_arvalid,
+    output wire                        s_axi_arready,
     // Read data channel
-    output wire [C_DATA_WIDTH-1:0] s_axi_rdata,
-    output wire [1:0] s_axi_rresp,
-    output wire s_axi_rvalid,
-    input  wire s_axi_rready,
+    output wire [    C_DATA_WIDTH-1:0] s_axi_rdata  ,
+    output wire [                 1:0] s_axi_rresp  ,
+    output wire                        s_axi_rvalid ,
+    input  wire                        s_axi_rready ,
     // Register Interface
-    //===================
-    % for reg in regMap:
-    // Register ${ reg.name } at ${ hex(reg.address_offset) }
-        % for field in reg:
-            % if field.type == 'RW':
-    output wire [${ field.bit_width - 1 }:0] ${reg.name}_${field.name},
-            % endif
-        % endfor
+    //-------------------
+{{- range $i, $r := .RegisterMap.Registers}}
+    // Register {{$r.Name}}
 
-    % endfor
+{{- range $j, $f := $r.Fields}}
+
+{{- if (eq $f.Type "RW")}}
+    output wire {{if gt $f.BitWidth 1}}[{{add $f.BitWidth -1}}:0]{{end}} {{$r.Name | ToLower }}_{{$f.Name | ToLower }}
+{{- else if (eq $f.Type "RO")}}
+    input  wire {{if gt $f.BitWidth 1}}[{{add $f.BitWidth -1}}:0]{{end}} {{$r.Name | ToLower }}_{{$f.Name | ToLower }}
+{{- else if (eq $f.Type "SC")}}
+    output wire {{if gt $f.BitWidth 1}}[{{add $f.BitWidth -1}}:0]{{end}} {{$r.Name | ToLower }}_{{$f.Name | ToLower }}
+{{- end}}
+
+{{- if le $j (add (len $r.Fields) -1)}},{{end}}
+{{- end}}
+
+{{- if le $i (add (len $.RegisterMap.Registers) -1)}},{{end}}
+{{- end}}
 );
-
 
     initial begin
         if (!((C_DATA_WIDTH == 32) || (C_DATA_WIDTH == 64))) begin
